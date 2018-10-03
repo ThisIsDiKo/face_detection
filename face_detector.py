@@ -2,6 +2,8 @@ import numpy as np
 from  math import sqrt
 from statistics import median
 import cv2
+from gpio_thread import Copper_Hat
+from queue import Queue
 
 _WIDTH = 320
 _HEIGHT = 240
@@ -28,6 +30,12 @@ x_cur = 0
 y_cur = 0
 w_cur = 0
 h_cur = 0
+data_queue = Queue()
+cmd_queue = Queue()
+return_queue = Queue()
+
+copperHat = Copper_Hat(data_queue, cmd_queue, return_queue, target_pos=160)
+copperHat.start()
 while(True):
     ret, frame = cap.read()
     d_min = _WIDTH ** 2 * 1.4
@@ -62,11 +70,14 @@ while(True):
             l_faces.pop(0)
             signal = int(int(_WIDTH / 2) - face_x)
             print('face is', face_x, 'S:', signal)
+            data_queue.put(face_x)
 
     cv2.imshow('frame', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
     # When everything done, release the capture
+cmd_queue.put("stopthread")
+
 cap.release()
 cv2.destroyAllWindows()

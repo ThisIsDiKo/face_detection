@@ -2,6 +2,7 @@ import os
 import threading
 import math
 from queue import Queue
+import time
 
 class Copper_Hat(threading.Thread):
     def __init__(self, input_queue, cmd_queue, output_queue, target_pos=160):
@@ -17,28 +18,40 @@ class Copper_Hat(threading.Thread):
         self.prev_err_pos = 0
         self.sum_err_pos = 0
         self.speed = 0
+        self.isRunning = True
 
     def run(self):
-        while(True):
-            data = self.input_queue.get()
-            print("thr data:", data)
-            speed = self.PID_regulator(data)
-            print("Speed: ")
-            if speed > 0:
-                pass
-                #Positive direction
-            else:
-                pass
-                #Negative direction
+        while(self.isRunning):
+            if not self.input_queue.empty():
+                data = self.input_queue.get()
+                print("thr data:", data)
+                #speed = self.PID_regulator(data)
+                speed = self.P_regulator(data)
+                print("Speed: ", speed)
+                if speed > 0:
+                    pass
+                    #Positive direction
+                else:
+                    pass
+                    #Negative direction
             #self.input_queue.task_done() #на другой стороне queue.join()
 
-            cmd = self.cmd_queue.get()
-            print("cmd data:", cmd)
+            if not self.cmd_queue.empty():
+                cmd = self.cmd_queue.get()
+                print("cmd data:", cmd)
+                if cmd == "stopthread":
+                    print("thread stop")
+                    self.isRunning = False
+                if cmd == "gohome":
+                    self.go_home()
+                if cmd == "stop":
+                    self.stop_motor()
 
             #сли пришла команда на калибровку, то выполняем необходимые действия
 
             #проверяем состояние кнопки
             state = self.check_btn()
+            time.sleep(0.05)
 
 
     def go_home(self):
@@ -54,18 +67,32 @@ class Copper_Hat(threading.Thread):
         return state
 
     def PID_regulator(self, pos):
-        speed = 0
-        P = 0.02
-        I = 0.01
-        D = 0.05
+        Kp = 0.02       #
+        Ki = 0.01       #
+        Kd = 0.05       #
 
         err_pos = self.target - pos
-        self.speed += (P * err_pos) + (D * self.prev_err_pos) + (I * self.sum_err_pos)
+        print("Err pos:", err_pos)
+        self.speed += (Kp * err_pos) + (Kd * self.prev_err_pos) + (Ki * self.sum_err_pos)
         self.prev_err_pos = err_pos
         self.sum_err_pos += err_pos
 
-        if speed < -1023:
+        if self.speed < -1023:
             self.speed = -1023
-        if speed > 1023:
+        if self.speed > 1023:
             self.speed = 1023
         return self.speed
+
+    def P_regulator(self, pos):
+        err_pos = self.target - pos
+        Kp = 1 #160 -> 1023 Kp = 6.39
+        self.speed += Kp * err_pos
+
+        if self.speed < -1023:
+            self.speed = -1023
+        if self.speed > 1023:
+            self.speed = 1023
+        return self.speed
+
+    def stop_motor(self):
+        pass
