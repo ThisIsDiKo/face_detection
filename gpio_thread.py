@@ -24,7 +24,6 @@ class Copper_Hat(threading.Thread):
         while(self.isRunning):
             if not self.input_queue.empty():
                 data = self.input_queue.get()
-                print("thr data:", data)
                 #speed = self.PID_regulator(data)
                 speed = self.P_regulator(data)
                 print("Speed: ", speed)
@@ -51,7 +50,23 @@ class Copper_Hat(threading.Thread):
 
             #проверяем состояние кнопки
             state = self.check_btn()
-            time.sleep(0.05)
+
+
+            is_pressed = self.check_switch()
+
+            if is_pressed:
+                if self.speed > 0:
+                    self.cur_sector = True
+                    pass
+                elif self.speed < 0:
+                    self.cur_sector = False
+                    pass
+                else:
+                    pass
+                pass
+
+
+            time.sleep(0.02)
 
 
     def go_home(self):
@@ -85,9 +100,9 @@ class Copper_Hat(threading.Thread):
 
     def P_regulator(self, pos):
         err_pos = self.target - pos
-        Kp = 1 #160 -> 1023 Kp = 6.39
-        self.speed += Kp * err_pos
-
+        Kp = 6.39 #160 -> 1023 Kp = 6.39
+        #self.speed += Kp * err_pos
+        self.speed = Kp * err_pos
         if self.speed < -1023:
             self.speed = -1023
         if self.speed > 1023:
@@ -95,4 +110,5 @@ class Copper_Hat(threading.Thread):
         return self.speed
 
     def stop_motor(self):
+        print("Stop motor")
         pass

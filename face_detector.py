@@ -8,7 +8,7 @@ from queue import Queue
 _WIDTH = 320
 _HEIGHT = 240
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
 cap.set(3, _WIDTH)
@@ -60,7 +60,6 @@ while(True):
             h_cur = h
 
         cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 1)
-        print("xpos is", face_x)
 
     if face_x > 0:
         cv2.rectangle(frame, (x_cur, y_cur), (x_cur + w_cur, y_cur + h_cur), (0, 0, 255), 2)
