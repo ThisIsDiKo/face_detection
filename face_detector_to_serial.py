@@ -3,6 +3,7 @@ from statistics import median
 import time
 import serial
 import threading
+import logging
 
 _WIDTH = 320
 _HEIGHT = 240
@@ -14,7 +15,8 @@ _LENGTH_OF_SAMPLES_ARRAY = 5
 
 video_input = cv2.VideoCapture(_NUMBER_OF_VIDEO_INPUT)
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-
+logging.basicConfig(filename='logs.log', level=logging.DEBUG)
+logging.info("script started at: "+time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 video_input.set(3, _HEIGHT)
 video_input.set(4, _HEIGHT)
 
@@ -73,9 +75,12 @@ while(True):
             data_to_send = bytes('p:{}\r\n'.format(err_target), 'utf-8')
             #TODO: отправка сообщения p:<err_target>\r\n
             if mcu_serial.is_open:
-                #thread = threading.Thread(target=write_to_serial, args=(mcu_serial, data_to_send,))
-                #thread.start()
-                mcu_serial.write(data_to_send)
+                thread = threading.Thread(target=write_to_serial, args=(mcu_serial, data_to_send,))
+                thread.start()
+                #mcu_serial.write(data_to_send)
+            else:
+                logging.logging.warning('Serial disconnected at ' + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
+
 
     else:
         #TODO: добавить случай потери цели, через 5 секунд GO HOME
