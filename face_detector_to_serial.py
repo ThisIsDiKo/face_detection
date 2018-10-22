@@ -11,7 +11,7 @@ _NUMBER_OF_VIDEO_INPUT = 0
 
 _SHOW_FRAMES = 1
 
-_LENGTH_OF_SAMPLES_ARRAY = 5
+_LENGTH_OF_SAMPLES_ARRAY = 11
 
 video_input = cv2.VideoCapture(_NUMBER_OF_VIDEO_INPUT)
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -29,6 +29,7 @@ mcu_serial.baudrate = 115200
 mcu_serial.port = 'COM7'
 mcu_serial.open()
 
+#TODO: Добиться стабильного подключения к микроконтроллеру
 if mcu_serial.is_open:
     print('Serial connection set')
 else:
@@ -42,7 +43,38 @@ def write_to_serial(serial_port, data):
     serial_port.write(data)
     print('end')
 
+print("Connecting to mcu")
+not_connected = True
+while(not_connected):
+    if mcu_serial.is_open:
+        if mcu_serial.inWaiting() > 0:
+            not_connected = False
+            mcu_serial.read(mcu_serial.inWaiting())
+            data_to_send = bytes('\r\n', 'utf-8')
+            write_to_serial(mcu_serial, data_to_send)
+            time.sleep(0.1)
+            data_to_send = bytes('c\r\n', 'utf-8')
+            write_to_serial(mcu_serial, data_to_send)
+            break;
+        write_to_serial(mcu_serial, bytes('h', 'utf-8'))
+        time.sleep(0.5)
 
+#mcu_serial.write(bytes('c\r\n', 'utf-8'))
+print("calibration mcu")
+not_calibr = True
+while(not_calibr):
+    if mcu_serial.is_open:
+        if mcu_serial.inWaiting() > 0:
+            data_from_mcu += mcu_serial.read(mcu_serial.inWaiting()).decode('ascii')
+            if data_from_mcu.endswith('\n'):
+                print('From MCU:', data_from_mcu)
+                if 'home\r\n' in data_from_mcu:
+                    print('calibrated')
+                    not_calibr = False
+                data_from_mcu = ''
+
+
+#TODO:  текущей версии есть проблемы с превращением систетмы в генератор, обдумать способы избавления от этого явления
 
 while(True):
     start_time = time.clock()
@@ -71,8 +103,8 @@ while(True):
         if len(face_samples) == _LENGTH_OF_SAMPLES_ARRAY:
             face_pos = median(face_samples)
             face_samples.pop(0)
-            err_target = int(int(_WIDTH / 2) - face_pos)
-            data_to_send = bytes('p:{}\r\n'.format(err_target), 'utf-8')
+            err_target = -int(int(_WIDTH / 2) - face_pos)
+            data_to_send = bytes('e:{}\r\n'.format(err_target), 'utf-8')
             #TODO: отправка сообщения p:<err_target>\r\n
             if mcu_serial.is_open:
                 thread = threading.Thread(target=write_to_serial, args=(mcu_serial, data_to_send,))
@@ -106,7 +138,6 @@ while(True):
                                                                           face_pos,
                                                                           err_target,
                                                                           frame_rate))
-
 
 video_input.release()
 cv2.destroyAllWindows()
